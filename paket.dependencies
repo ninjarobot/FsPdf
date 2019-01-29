@@ -1,0 +1,21 @@
+// [ FAKE GROUP ]
+group Build
+    storage none
+    source https://api.nuget.org/v3/index.json
+    nuget Fake.DotNet.Cli
+    nuget Fake.IO.FileSystem
+    nuget Fake.Core.Target
+
+group Test
+    storage none
+    source https://api.nuget.org/v3/index.json
+    nuget Microsoft.NET.Test.Sdk 15.9.0
+    nuget xunit 2.4.0
+    nuget xunit.runner.visualstudio 2.4.0
+    nuget FSharp.Core 4.5.2
+
+group Main
+    storage none
+    source https://api.nuget.org/v3/index.json
+    nuget FSharp.Core 4.5.2
+
