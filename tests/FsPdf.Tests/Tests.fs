@@ -13,7 +13,7 @@ let ``Simple PDF`` () =
             "/F1 18 Tf"
             "20 500 Td"
             "(Hello World) Tj"
-            "ED"
+            "ET"
         ] |> String.concat "\n"
         |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
@@ -57,11 +57,13 @@ let ``Simple PDF`` () =
                 )
             )
         ]
+    System.IO.File.Delete ("/tmp/test.pdf")
     use stream = System.IO.File.OpenWrite ("/tmp/test.pdf")
-    use writer = new System.IO.BinaryWriter (stream)
+    use writer = new System.IO.StreamWriter (stream)//, System.Text.Encoding.ASCII)
     PdfObject.writePreamble (writer)
     let xrefs = ResizeArray<XRef>()
-    pdf |> List.iter (PdfObject.writeSource writer xrefs)
+    pdf |> List.iter (fun p -> p |> PdfObject.writeSource writer xrefs; writer.WriteLine ())
+    writer.Flush ()
     let startxref = writer.BaseStream.Position
     PdfObject.writeXrefSection writer xrefs
     PdfObject.writeTrailer writer startxref

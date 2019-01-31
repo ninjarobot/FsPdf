@@ -22,11 +22,11 @@ module Pdf =
     
     module PdfObject =
 
-        let rec writeSource (writer:System.IO.BinaryWriter) (xrefs:ResizeArray<XRef>) = function
-            | PName n -> writer.Write (System.Text.Encoding.ASCII.GetBytes(System.String.Format ("/{0}", n)))
-            | PInteger i -> writer.Write (System.Text.Encoding.ASCII.GetBytes(i |> string))
-            | PString s -> writer.Write (System.Text.Encoding.ASCII.GetBytes(System.String.Format ("({0})", s)))
-            | PReference (o, g) -> writer.Write (System.Text.Encoding.ASCII.GetBytes(System.String.Format ("{0} {1} R", o, g)))
+        let rec writeSource (writer:System.IO.StreamWriter) (xrefs:ResizeArray<XRef>) = function
+            | PName n -> writer.Write (System.String.Format ("/{0}", n))
+            | PInteger i -> writer.Write i
+            | PString s -> writer.Write (System.String.Format ("({0})", s))
+            | PReference (o, g) -> writer.Write (System.String.Format ("{0} {1} R", o, g))
             | PArray arr ->
                 writer.Write "["
                 arr |> List.iter (fun item ->
@@ -38,14 +38,15 @@ module Pdf =
             | PDictionary d ->
                 writer.Write "<<"
                 writer.Write System.Environment.NewLine
+                writer.Write System.Environment.NewLine
                 d |> Map.iter (fun name pdfObj ->
-                    writer.Write (System.Text.Encoding.ASCII.GetBytes(System.String.Format("/{0} ", name)))
+                    writer.Write (System.String.Format("/{0} ", name))
                     pdfObj |> writeSource writer xrefs
                     writer.Write System.Environment.NewLine
                 )
                 writer.Write ">>"
-                writer.Write System.Environment.NewLine
             | PIndObj (i, g, pdfObject) ->
+                writer.Flush()
                 let newXref =
                     {
                          Object = i
@@ -53,42 +54,44 @@ module Pdf =
                          InUse = true
                          Offset = writer.BaseStream.Position
                     }
-                writer.Write (System.Text.Encoding.ASCII.GetBytes(System.String.Format("{0} {1} obj", i, g)))
+                writer.Write (System.String.Format("{0} {1} obj", i, g))
                 writer.Write System.Environment.NewLine
                 pdfObject |> writeSource writer xrefs
                 writer.Write "endobj"
                 writer.Write System.Environment.NewLine
                 xrefs.Add newXref
             | PStream (d, bytes) ->
-                writer.Write "<<"
-                writer.Write System.Environment.NewLine
-                writer.Write (System.String.Format("{0}", bytes.Length))
-                writer.Write System.Environment.NewLine
-                writer.Write ">>"
+                writer.Write "<< "
+                writer.Write (System.String.Format("/Length {0}", bytes.Length))
+                writer.Write " >>"
                 writer.Write System.Environment.NewLine
                 writer.Write "stream"
                 writer.Write System.Environment.NewLine
-                writer.Write (bytes)
+                writer.Flush ()
+                writer.BaseStream.Write (bytes, 0, bytes.Length)
+                writer.BaseStream.Flush ()
                 writer.Write System.Environment.NewLine
-                writer.Write (System.Text.Encoding.ASCII.GetBytes("endstream"))
+                writer.Write ("endstream")
                 writer.Write System.Environment.NewLine
         
-        let writePreamble (writer:System.IO.BinaryWriter) =
+        let writePreamble (writer:System.IO.StreamWriter) =
             writer.Write ("%PDF-1.7")
             writer.Write System.Environment.NewLine
             writer.Write ("%\u15B4\u266F\u2502\u227B\u2C92\u2764") // ᖴ♯│≻Ⲓ❤
             writer.Write System.Environment.NewLine
+            writer.Write System.Environment.NewLine
             
-        let writeXrefSection (writer:System.IO.BinaryWriter) (xrefs:ResizeArray<XRef>) =
+        let writeXrefSection (writer:System.IO.StreamWriter) (xrefs:ResizeArray<XRef>) =
             writer.Write "xref"
             writer.Write System.Environment.NewLine
-            writer.Write (System.String.Format ("{0} {1}", 0, xrefs.Count))
+            writer.Write (System.String.Format ("{0} {1}", 0, xrefs.Count + 1))
             writer.Write System.Environment.NewLine
             writer.Write ("0000000000")
             writer.Write (" ")
             writer.Write ("65535")
             writer.Write (" ")
             writer.Write "f"
+            writer.Write System.Environment.NewLine
             for xref in xrefs do
                 writer.Write (xref.Offset.ToString("0000000000"))
                 writer.Write (" ")
@@ -98,9 +101,10 @@ module Pdf =
                     writer.Write "n"
                 else
                     writer.Write "f"
+                writer.Write System.Environment.NewLine
             writer.Write System.Environment.NewLine
         
-        let writeTrailer (writer:System.IO.BinaryWriter) (xrefStart:int64) =
+        let writeTrailer (writer:System.IO.StreamWriter) (xrefStart:int64) =
             writer.Write "trailer"
             let xrefs = new ResizeArray<XRef> ()
             writer.Write System.Environment.NewLine
