@@ -16,6 +16,14 @@ let ``Simple PDF`` () =
             "ET"
         ] |> String.concat "\n"
         |> System.Text.Encoding.UTF8.GetBytes
+    let content =
+        [
+            Move (200,350)
+            LineTo (500, 750)
+            LineTo (600, 300)
+            LineTo (175, 220)
+            Stroke
+        ] |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
         [
             PIndObj (1, 0,

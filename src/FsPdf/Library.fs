@@ -20,6 +20,21 @@ module Pdf =
             Offset: int64
         }
     
+    type Instructions =
+        // m
+        | Move of x:int * y:int
+        // l
+        | LineTo of x:int * y:int
+        | Stroke
+        | Width of pixels:float
+    
+    module Instructions =
+        let instruction = function
+            | Stroke -> "S"
+            | Width p -> System.String.Format ("{0} w", p)
+            | Move (x, y) -> System.String.Format ("{0} {1} m", x, y)
+            | LineTo (x, y) -> System.String.Format ("{0} {1} l", x, y)
+        
     module PdfObject =
 
         let rec writeSource (writer:System.IO.StreamWriter) (xrefs:ResizeArray<XRef>) = function
@@ -61,10 +76,7 @@ module Pdf =
                 writer.Write System.Environment.NewLine
                 xrefs.Add newXref
             | PStream (d, bytes) ->
-                writer.Write "<< "
-                writer.Write (System.String.Format("/Length {0}", bytes.Length))
-                writer.Write " >>"
-                writer.Write System.Environment.NewLine
+                writer.WriteLine ("<< /Length {0} >>", bytes.Length)
                 writer.Write "stream"
                 writer.Write System.Environment.NewLine
                 writer.Flush ()
