@@ -44,7 +44,7 @@ let ``Simple PDF`` () =
             Width 2.0
             System.Drawing.Color.Goldenrod |> toRGBStroke
             CloseFillStroke
-        ] |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
+        ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.)) |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
         [
             PIndObj (1, 0,

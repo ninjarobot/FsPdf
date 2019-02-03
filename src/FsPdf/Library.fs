@@ -37,6 +37,8 @@ module Pdf =
         // b - close, fill, and stroke the current path (non-zero winding rule)
         | CloseFillStroke
         | Width of pixels:float
+        | GrayStroke of lightness:float
+        | GrayFill of lightness:float
         | RGBStroke of red:float * green:float * blue:float
         | RGBFill of red:float * green:float * blue:float
         | PushGraphicsState
@@ -67,10 +69,30 @@ module Pdf =
             | Fill -> "F"
             | FillStroke -> "B"
             | CloseFillStroke -> "b"
+            | GrayStroke (lightness) -> System.String.Format ("{0} G", lightness)
+            | GrayFill (lightness) -> System.String.Format ("{0} g", lightness)
             | RGBStroke (r, g, b) -> System.String.Format ("{0} {1} {2} RG", r, g, b)
             | RGBFill (r, g, b) -> System.String.Format ("{0} {1} {2} rg", r, g, b)
             | PushGraphicsState -> "q"
             | PopGraphicsState -> "Q"
+    
+    module Shapes =
+        type Point = {
+            x:int
+            y:int
+        }
+        
+        let rectange (bottomLeft:Point) (topRight:Point) (fill:System.Drawing.Color) (border:System.Drawing.Color * float) =
+            [
+                Move (bottomLeft.x, bottomLeft.y)
+                LineTo (bottomLeft.x, topRight.y)
+                LineTo (topRight.x, topRight.y)
+                LineTo (topRight.x, bottomLeft.y)
+                fill |> toRGBFill
+                border |> fst |> toRGBStroke
+                border |> snd |> Width
+                CloseFillStroke
+            ]
         
     module PdfObject =
 
