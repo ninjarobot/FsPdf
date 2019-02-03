@@ -22,7 +22,28 @@ let ``Simple PDF`` () =
             LineTo (500, 750)
             LineTo (600, 300)
             LineTo (175, 220)
-            Stroke
+            ClosePath
+            RGBFill (0.3, 0.0, 0.4)
+            RGBStroke (0.7, 0.0, 0.7)
+            Width 5.0
+            FillStroke
+            PushGraphicsState
+            Move (10, 20)
+            Curve (5, 10, 60, 50, 75, 100)
+            LineTo (75, 50)
+            LineTo (10, 50)
+            RGBFill (0., 0.9, 0.6)
+            RGBStroke (0., 0., 0.)
+            Width 2.0
+            CloseFillStroke
+            PopGraphicsState
+            Move (250, 250)
+            LineTo (300, 250)
+            LineTo (300, 300)
+            LineTo (250, 300)
+            Width 2.0
+            System.Drawing.Color.Goldenrod |> toRGBStroke
+            CloseFillStroke
         ] |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
         [

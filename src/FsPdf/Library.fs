@@ -25,8 +25,36 @@ module Pdf =
         | Move of x:int * y:int
         // l
         | LineTo of x:int * y:int
+        // c - curve from some start point - the two control points and the end point
+        | Curve of c1x:int * c1y:int * c2x:int * c2y:int * endx:int * endy:int
         | Stroke
+        // h - close the current path.
+        | ClosePath
+        // F - fill the current path (non-zero winding rule)
+        | Fill
+        // B - fill and stroke the current path (non-zero winding rule)
+        | FillStroke
+        // b - close, fill, and stroke the current path (non-zero winding rule)
+        | CloseFillStroke
         | Width of pixels:float
+        | RGBStroke of red:float * green:float * blue:float
+        | RGBFill of red:float * green:float * blue:float
+        | PushGraphicsState
+        | PopGraphicsState
+    
+    let toRGBStroke (color:System.Drawing.Color) =
+        RGBStroke (
+            (color.R |> float) / 255.,
+            (color.G |> float) / 255.,
+            (color.B |> float) / 255.
+        )
+    
+    let toRGBFill (color:System.Drawing.Color) =
+        RGBFill (
+            (color.R |> float) / 255.,
+            (color.G |> float) / 255.,
+            (color.B |> float) / 255.
+        )
     
     module Instructions =
         let instruction = function
@@ -34,6 +62,15 @@ module Pdf =
             | Width p -> System.String.Format ("{0} w", p)
             | Move (x, y) -> System.String.Format ("{0} {1} m", x, y)
             | LineTo (x, y) -> System.String.Format ("{0} {1} l", x, y)
+            | Curve (c1x, c1y, c2x, c2y, endx, endy) -> System.String.Format ("{0} {1} {2} {3} {4} {5} c", c1x, c1y, c2x, c2y, endx, endy)
+            | ClosePath -> "h"
+            | Fill -> "F"
+            | FillStroke -> "B"
+            | CloseFillStroke -> "b"
+            | RGBStroke (r, g, b) -> System.String.Format ("{0} {1} {2} RG", r, g, b)
+            | RGBFill (r, g, b) -> System.String.Format ("{0} {1} {2} rg", r, g, b)
+            | PushGraphicsState -> "q"
+            | PopGraphicsState -> "Q"
         
     module PdfObject =
 
