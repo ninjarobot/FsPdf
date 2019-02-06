@@ -41,6 +41,9 @@ module Pdf =
         | GrayFill of lightness:float
         | RGBStroke of red:float * green:float * blue:float
         | RGBFill of red:float * green:float * blue:float
+        | Translate of dx:int * dy:int
+        | Scale of scalex:int * scaley:int
+        | Rotate of radians:float
         | PushGraphicsState
         | PopGraphicsState
     
@@ -73,6 +76,12 @@ module Pdf =
             | GrayFill (lightness) -> System.String.Format ("{0} g", lightness)
             | RGBStroke (r, g, b) -> System.String.Format ("{0} {1} {2} RG", r, g, b)
             | RGBFill (r, g, b) -> System.String.Format ("{0} {1} {2} rg", r, g, b)
+            | Translate (dx, dy) -> System.String.Format ("1 0 0 1 {0} {1} cm", dx, dy)
+            | Scale (scalex, scaley) -> System.String.Format ("{0} 0 0 {1} 0 0 cm", scalex, scaley)
+            | Rotate (radians) ->
+                let sinx = System.Math.Sin radians
+                let cosx = System.Math.Cos radians
+                System.String.Format ("{0} {1} {2} {3} 0 0 cm", cosx, sinx, -1. * sinx, cosx )
             | PushGraphicsState -> "q"
             | PopGraphicsState -> "Q"
     

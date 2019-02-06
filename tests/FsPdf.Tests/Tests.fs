@@ -44,7 +44,17 @@ let ``Simple PDF`` () =
             Width 2.0
             System.Drawing.Color.Goldenrod |> toRGBStroke
             CloseFillStroke
-        ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.)) |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
+        ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
+        |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
+    let content =
+        let ins =[ 1..174 ] |> List.pairwise |> List.mapi (fun idx (color1, color2) ->
+                [
+                    yield! (Shapes.rectange {x=idx + 10; y=idx + 10} {x=idx + 25; y=idx + 30} (enum<System.Drawing.KnownColor> color1 |> System.Drawing.Color.FromKnownColor) (enum<System.Drawing.KnownColor> color2 |> System.Drawing.Color.FromKnownColor, 2.))
+                    yield Translate (3, 4)
+                    yield Rotate (0.1)
+                ]
+            )
+        [Translate (350, 450)] :: ins |> List.concat |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
         [
             PIndObj (1, 0,
