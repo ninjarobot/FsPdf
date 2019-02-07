@@ -46,6 +46,18 @@ module Pdf =
         | Rotate of radians:float
         | PushGraphicsState
         | PopGraphicsState
+        | BeginText
+        | EndText
+        | CharSpacing of charSpace:int
+        | WordSpacing of wordSpace:int
+        | HorizontalScaling of scale:float
+        | Leading of leading:int
+        | NextLineAt of x:int * y:int
+        | NextLine
+        | FontSize of fontKey:string * size:float
+        | TextMatrix of scalex:int * scaley:int * translateX:int * translateY:int
+        | ShowText of text:string
+        
     
     let toRGBStroke (color:System.Drawing.Color) =
         RGBStroke (
@@ -62,6 +74,9 @@ module Pdf =
         )
     
     module Instructions =
+        let escapeString (s:string) =
+            s.Replace(@"\", @"\\").Replace("(", "\(").Replace(")", "\)")
+        
         let instruction = function
             | Stroke -> "S"
             | Width p -> System.String.Format ("{0} w", p)
@@ -84,6 +99,17 @@ module Pdf =
                 System.String.Format ("{0} {1} {2} {3} 0 0 cm", cosx, sinx, -1. * sinx, cosx )
             | PushGraphicsState -> "q"
             | PopGraphicsState -> "Q"
+            | BeginText -> "BT"
+            | EndText -> "ET"
+            | CharSpacing (charSpacing) -> System.String.Format ("{0} Tc", charSpacing)
+            | WordSpacing (wordSpacing) -> System.String.Format ("{0} Tw", wordSpacing)
+            | HorizontalScaling (scale) -> System.String.Format ("{0} Tz", scale / 100.)
+            | Leading (leading) -> System.String.Format ("{0} TL", leading)
+            | NextLineAt (x, y) -> System.String.Format ("{0} {1} Td", x, y)
+            | NextLine -> "T*"
+            | FontSize (fontKey, size) -> System.String.Format ("/{0} {1} Tf", fontKey, size)
+            | TextMatrix (scaleX, scaleY, translateX, translateY) -> System.String.Format ("{0} 0 0 {1} {2} {3} Tm")
+            | ShowText (text) -> System.String.Format ("({0}) Tj", (text |> escapeString))
     
     module Shapes =
         type Point = {
