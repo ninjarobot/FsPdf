@@ -4,7 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="Afm.fs" />
+    <Compile Include="Instructions.fs" />
+    <Compile Include="Pdf.fs" />
+    <Compile Include="Shapes.fs" />
     <EmbeddedResource Include="../../afm/*.afm" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
