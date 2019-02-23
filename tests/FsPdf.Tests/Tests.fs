@@ -1,22 +1,33 @@
 module Tests
 
 open System
-open System.IO
 open Xunit
 open FsPdf.Pdf
 
 [<Fact>]
 let ``Simple PDF`` () =
+    let content = "F# is a mature, open source, cross-platform, functional-first programming language. It empowers users and organizations to tackle complex computing problems with simple, maintainable and robust code."
+    let font = { Name="Times-Roman"; Size=18. }
+    use reader = new System.IO.StringReader (content)
+    let lines =
+        Afm.wrapString Afm.embeddedFontMetrics font 550. reader
+        |> Seq.map (fun line -> [ShowText line; NextLine])
+        |> Seq.concat |> List.ofSeq
     let content =
         [
-            "BT"
-            "/F1 18 Tf"
-            "20 500 Td"
-            "(Hello World) Tj"
-            "ET"
-        ] |> String.concat "\n"
+            BeginText
+            Leading (20)
+            FontSize ("F1", 18.)
+            NextLineTranslate (50, 600)
+        ] @
+        lines @
+        [
+            NextLineTranslate (30, -20)
+            ShowText "--fsharp.org"
+            EndText
+        ] |> List.map Instructions.instruction |>  String.concat " "
         |> System.Text.Encoding.UTF8.GetBytes
-    let content =
+    let content2 =
         [
             Move (200,350)
             LineTo (500, 750)
@@ -46,10 +57,10 @@ let ``Simple PDF`` () =
             CloseFillStroke
         ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
         |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
-    let content =
+    let content3 =
         let ins =[ 1..174 ] |> List.pairwise |> List.mapi (fun idx (color1, color2) ->
                 [
-                    yield! (Shapes.rectange {x=idx + 10; y=idx + 10} {x=idx + 25; y=idx + 30} (enum<System.Drawing.KnownColor> color1 |> System.Drawing.Color.FromKnownColor) (enum<System.Drawing.KnownColor> color2 |> System.Drawing.Color.FromKnownColor, 2.))
+                    yield! (Shapes.rectange {x=idx + 10; y=idx + 10} {x=idx + 75; y=idx + 30} (enum<System.Drawing.KnownColor> color1 |> System.Drawing.Color.FromKnownColor) (enum<System.Drawing.KnownColor> color2 |> System.Drawing.Color.FromKnownColor, 2.))
                     yield Translate (3, 4)
                     yield Rotate (0.1)
                 ]
@@ -98,7 +109,7 @@ let ``Simple PDF`` () =
         ]
     System.IO.File.Delete ("/tmp/test.pdf")
     use stream = System.IO.File.OpenWrite ("/tmp/test.pdf")
-    use writer = new System.IO.StreamWriter (stream)//, System.Text.Encoding.ASCII)
+    use writer = new System.IO.StreamWriter (stream)
     PdfObject.writePreamble (writer)
     let xrefs = ResizeArray<XRef>()
     pdf |> List.iter (fun p -> p |> PdfObject.writeSource writer xrefs; writer.WriteLine ())
@@ -107,3 +118,21 @@ let ``Simple PDF`` () =
     PdfObject.writeXrefSection writer xrefs
     PdfObject.writeTrailer writer startxref
     Assert.True(true)
+
+[<Fact>]
+let ``Measure a string`` () =
+    let testString = "This is a test of string measurement."
+    let testFont = { Name="Helvetica"; Size=8. }
+    let fontMetrics = Afm.embeddedFontMetrics
+    let width = Afm.measureString fontMetrics testFont testString |> float32
+    (* How I came up with 128.9375, I rendered it with UIKit.  Seems close.
+        import UIKit
+        
+        var str = "This is a test of string measurement."
+        let font = UIFont (name: "Helvetica", size: 8)
+        let atts = [NSAttributedString.Key.font: font]
+        let attStr = NSAttributedString(string: str, attributes: atts as [NSAttributedString.Key : Any])
+        attStr.size().width
+    
+    *)
+    Assert.Equal (Math.Truncate (float 128.9375 * 100.), Math.Truncate(float width * 100.))
