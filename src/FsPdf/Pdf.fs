@@ -99,13 +99,13 @@ module PdfObject =
             writer.Write System.Environment.NewLine
         writer.Write System.Environment.NewLine
     
-    let writeTrailer (writer:System.IO.StreamWriter) (xrefStart:int64) =
+    let writeTrailer (writer:System.IO.StreamWriter) (xrefStart:int64) (numXRefs:int) =
         writer.Write "trailer"
         let xrefs = new ResizeArray<XRef> ()
         writer.Write System.Environment.NewLine
         [
             "Root", PReference (1, 0)
-            "Size", PInteger 5
+            "Size", PInteger numXRefs
         ] |> Map.ofList |> PDictionary |> writeSource writer xrefs
         writer.Write "startxref"
         writer.Write System.Environment.NewLine

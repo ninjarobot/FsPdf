@@ -117,7 +117,7 @@ let ``Simple PDF`` () =
     writer.Flush ()
     let startxref = writer.BaseStream.Position
     PdfObject.writeXrefSection writer xrefs
-    PdfObject.writeTrailer writer startxref
+    PdfObject.writeTrailer writer startxref xrefs.Count
     Assert.True(true)
 
 [<Fact>]
