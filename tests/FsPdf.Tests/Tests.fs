@@ -67,6 +67,9 @@ let ``Simple PDF`` () =
                 ]
             )
         [Translate (350, 450)] :: ins |> List.concat |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
+    let content4 =
+        Shapes.triangle { x=200; y=200 } { x=300; y=300 } { x=250; y=200 } System.Drawing.Color.Brown (System.Drawing.Color.Pink, 2.)
+        |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
     let pdf =
         [
             PIndObj (1, 0,
