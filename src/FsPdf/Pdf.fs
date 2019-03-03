@@ -113,3 +113,13 @@ module PdfObject =
         writer.Write System.Environment.NewLine
         writer.Write "%%EOF"
         writer.Write System.Environment.NewLine
+
+    let writePdf (stream:System.IO.Stream) (pdf:PdfObject list) =
+        use writer = new System.IO.StreamWriter (stream)
+        writePreamble (writer)
+        let xrefs = ResizeArray<XRef>()
+        pdf |> List.iter (fun p -> p |> writeSource writer xrefs; writer.WriteLine ())
+        writer.Flush ()
+        let startxref = writer.BaseStream.Position
+        writeXrefSection writer xrefs
+        writeTrailer writer startxref xrefs.Count
