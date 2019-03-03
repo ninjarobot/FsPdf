@@ -24,6 +24,7 @@ module Layout =
         | A6
         | A7
         | A8
+        | Custom of Width:int * Height:int
         with
             /// Builds the MediaBox dictionary pair for a page.
             member mb.MediaBox =
@@ -43,6 +44,7 @@ module Layout =
                     | A6 -> 298, 420
                     | A7 -> 210, 298
                     | A8 -> 148, 210
+                    | Custom (width, height) -> width, height
                 "MediaBox", PArray [PInteger 0; PInteger 0; PInteger width; PInteger height]
     
     type Page =
