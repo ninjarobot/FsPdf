@@ -157,6 +157,42 @@ let ``Triangle PDF`` () =
     |> System.Text.Encoding.UTF8.GetBytes |> singlePageFromContent
     |> PdfObject.writePdf stream
 
+let colorfulTextContent = 
+    let text = ""
+    let font = { Name="Times-Roman"; Size=18. }
+    use reader = new System.IO.StringReader (text)
+    let lines =
+        wrapString embeddedFontMetrics font (612. - (72. * 2.)) reader
+        |> Seq.map (fun line -> [ShowText line; NextLine])
+        |> Seq.concat |> List.ofSeq
+    [
+        BeginText
+        Leading (20)
+        FontSize ("F1", 30.)
+        NextLineTranslate (50, 600)
+        System.Drawing.Color.BlueViolet |> Instructions.toRGBFill
+        ShowText "hello"
+        NextLineTranslate (30, -20)
+        System.Drawing.Color.Lime |> Instructions.toRGBFill
+        ShowText "world"
+        NextLineTranslate (0, -40)
+        System.Drawing.Color.Red |> Instructions.toRGBFill
+        FontSize ("F2", 16.)
+        ShowText "Using different colors and sizes of text."
+        EndText
+    ]
+
+[<Fact>]
+let ``Colorful Text PDF`` () =
+    let pdfName =
+        sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
+    System.IO.File.Delete (pdfName)
+    use stream = System.IO.File.OpenWrite (pdfName)
+    colorfulTextContent
+    |> List.map Instructions.instruction |> String.concat " "
+    |> System.Text.Encoding.UTF8.GetBytes |> singlePageFromContent
+    |> PdfObject.writePdf stream
+
 [<Fact>]
 let ``Measure a string`` () =
     let testString = "This is a test of string measurement."
@@ -176,7 +212,7 @@ let ``Measure a string`` () =
     Assert.Equal (Math.Truncate (float 128.9375 * 100.), Math.Truncate(float width * 100.))
 
 [<Fact>]
-let ``Build 4 page PDF`` () =
+let ``Build 5 page PDF`` () =
     let pdfName =
         sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
     System.IO.File.Delete (pdfName)
@@ -189,6 +225,14 @@ let ``Build 4 page PDF`` () =
                     DefaultMedia = Media.Letter
                     Pages =
                         [
+                            {
+                                Resources =
+                                    Map.empty
+                                    |> Map.add "F1" (FontResource (Type1, "Helvetica"))
+                                    |> Map.add "F2" (FontResource (Type1, "Courier"))
+                                Contents = colorfulTextContent
+                                MediaSize = Some (Letter)
+                            }
                             {
                                 Resources =
                                     Map.empty
