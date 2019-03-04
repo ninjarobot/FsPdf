@@ -170,12 +170,8 @@ module Layout =
                 yield PIndObj (2, 0,
                     [
                         "Type", PName "Pages"
-                        "Kids", PArray [
-                            PReference (3, 0)
-                            PReference (5, 0)
-                            PReference (7, 0)
-                            PReference (9, 0)
-                        ]
+                        "Kids", PArray // Add page references, which start with the third obj.
+                            [ for i in 1 .. 2 .. (pdfFile.Catalog.Pages.Length * 2) do yield PReference (i+2, 0) ]
                         "Count", PInteger pdfFile.Catalog.Pages.Length
                         "MediaBox", pdfFile.Catalog.DefaultMedia.MediaBox
                     ] |> Map.ofList |> PDictionary
