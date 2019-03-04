@@ -4,6 +4,7 @@ open System
 open Xunit
 open FsPdf
 open FsPdf.Afm
+open FsPdf.Layout
 
 let singlePageFromContent (content:byte array) =
     [
@@ -66,8 +67,7 @@ let wrappedTextContent =
         NextLineTranslate (30, -20)
         ShowText "--fsharp.org"
         EndText
-    ] |> List.map Instructions.instruction |>  String.concat " "
-    |> System.Text.Encoding.UTF8.GetBytes
+    ]
 
 [<Fact>]
 let ``Wrapped Text PDF`` () =
@@ -75,8 +75,11 @@ let ``Wrapped Text PDF`` () =
         sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
     System.IO.File.Delete (pdfName)
     use stream = System.IO.File.OpenWrite (pdfName)
-    let pdf = singlePageFromContent wrappedTextContent
-    PdfObject.writePdf stream pdf
+    wrappedTextContent
+    |> List.map Instructions.instruction |> String.concat " "
+    |> System.Text.Encoding.UTF8.GetBytes
+    |> singlePageFromContent
+    |> PdfObject.writePdf stream
 
 let someShapesContent =
     [
@@ -107,7 +110,6 @@ let someShapesContent =
         System.Drawing.Color.Goldenrod |> Instructions.toRGBStroke
         CloseFillStroke
     ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
-    |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
 
 [<Fact>]
 let ``Shape testing PDF`` () =
@@ -115,8 +117,10 @@ let ``Shape testing PDF`` () =
         sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
     System.IO.File.Delete (pdfName)
     use stream = System.IO.File.OpenWrite (pdfName)
-    let pdf = singlePageFromContent someShapesContent
-    PdfObject.writePdf stream pdf
+    someShapesContent
+    |> List.map Instructions.instruction |> String.concat " "
+    |> System.Text.Encoding.UTF8.GetBytes |> singlePageFromContent
+    |> PdfObject.writePdf stream
 
 let spiralRectanges =
     let ins =[ 1..174 ] |> List.pairwise |> List.mapi (fun idx (color1, color2) ->
@@ -126,7 +130,7 @@ let spiralRectanges =
                 yield Rotate (0.1)
             ]
         )
-    [Translate (350, 450)] :: ins |> List.concat |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
+    [Translate (350, 450)] :: ins |> List.concat
 
 [<Fact>]
 let ``Spiral rectangles PDF`` () =
@@ -134,12 +138,13 @@ let ``Spiral rectangles PDF`` () =
         sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
     System.IO.File.Delete (pdfName)
     use stream = System.IO.File.OpenWrite (pdfName)
-    let pdf = singlePageFromContent spiralRectanges
-    PdfObject.writePdf stream pdf
+    spiralRectanges
+    |> List.map Instructions.instruction |> String.concat " "
+    |> System.Text.Encoding.UTF8.GetBytes |> singlePageFromContent
+    |> PdfObject.writePdf stream
 
 let triangle =
     Shapes.triangle { x=200; y=600 } { x=300; y=700 } { x=400; y=600 } System.Drawing.Color.SteelBlue (System.Drawing.Color.Orange, 2.)
-    |> List.map Instructions.instruction |> String.concat " " |> System.Text.Encoding.UTF8.GetBytes
 
 [<Fact>]
 let ``Triangle PDF`` () =
@@ -147,9 +152,10 @@ let ``Triangle PDF`` () =
         sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
     System.IO.File.Delete (pdfName)
     use stream = System.IO.File.OpenWrite (pdfName)
-    let pdf = singlePageFromContent triangle
-    PdfObject.writePdf stream pdf
-    stream.Close ()
+    triangle
+    |> List.map Instructions.instruction |> String.concat " "
+    |> System.Text.Encoding.UTF8.GetBytes |> singlePageFromContent
+    |> PdfObject.writePdf stream
 
 [<Fact>]
 let ``Measure a string`` () =
@@ -168,3 +174,51 @@ let ``Measure a string`` () =
     
     *)
     Assert.Equal (Math.Truncate (float 128.9375 * 100.), Math.Truncate(float width * 100.))
+
+[<Fact>]
+let ``Build 4 page PDF`` () =
+    let pdfName =
+        sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
+    System.IO.File.Delete (pdfName)
+    use stream = System.IO.File.OpenWrite (pdfName)
+    let pdf =
+        {
+            Catalog =
+                {
+                    PageLayout = SinglePage
+                    DefaultMedia = Media.Letter
+                    Pages =
+                        [
+                            {
+                                Resources =
+                                    Map.empty
+                                    |> Map.add "F1" (FontResource (Type1, "Times-Roman"))
+                                Contents = wrappedTextContent
+                                MediaSize = Some (Letter)
+                            }
+                            {
+                                Resources =
+                                    Map.empty
+                                    |> Map.add "F1" (FontResource (Type1, "Times-Roman"))
+                                Contents = someShapesContent
+                                MediaSize = Some (Letter)
+                            }
+                            {
+                                Resources =
+                                    Map.empty
+                                Contents = spiralRectanges
+                                MediaSize = Some (Letter)
+                            }
+                            {
+                                Resources =
+                                    Map.empty
+                                Contents = triangle
+                                MediaSize = Some (Letter)
+                            }
+                        ]
+                }
+            Info = None
+        }
+    PdfObject.writePdf stream (pdf |> PdfFile.build)
+    stream.Close ()
+    ()

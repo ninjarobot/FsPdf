@@ -7,7 +7,33 @@ module Layout =
         | Type3
         
     type Resource =
-        | FontResource of Key:string * FontSubtype * Name:string
+        | FontResource of FontSubtype * Name:string
+    
+    module Resource =
+        let pdfObject = function
+            | FontResource (subtype, name) ->
+                let subtypeName =
+                    match subtype with
+                        | Type1 -> PName "Type1"
+                        | TrueType -> PName "TrueType"
+                        | Type3 -> PName "Type3"
+                Map.empty
+                |> Map.add "Type" (PName "Font")
+                |> Map.add "Subtype" subtypeName
+                |> Map.add "BaseFont" (PName name)
+                |> PDictionary
+        
+        let resourceDictionary (resources:Map<string, Resource>) =
+            // only have fonts now, will need to extend with different types of resources.
+            let fonts = System.Collections.Generic.Dictionary<string, PdfObject>()
+            for resource in resources do
+                match resource.Value with
+                | FontResource _ -> fonts.[resource.Key] <- resource.Value |> pdfObject
+            let fontDict = fonts |> Seq.map (|KeyValue|) |> Map.ofSeq |> PDictionary
+            Map.empty
+            |> Map.add "Font" fontDict
+            |> PDictionary
+
     
     type Media =
         | Letter
@@ -26,7 +52,7 @@ module Layout =
         | A8
         | Custom of Width:int * Height:int
         with
-            /// Builds the MediaBox dictionary pair for a page.
+            /// Builds the MediaBox array for a page.
             member mb.MediaBox =
                 let width, height =
                     match mb with
@@ -45,11 +71,11 @@ module Layout =
                     | A7 -> 210, 298
                     | A8 -> 148, 210
                     | Custom (width, height) -> width, height
-                "MediaBox", PArray [PInteger 0; PInteger 0; PInteger width; PInteger height]
+                PArray [PInteger 0; PInteger 0; PInteger width; PInteger height]
     
     type Page =
         {
-            Resources: Map<string, Resource list>
+            Resources: Map<string, Resource>
             Contents : FsPdf.Instructions list
             MediaSize: Media option
         }
@@ -111,6 +137,7 @@ module Layout =
         {
             Pages : Page list
             PageLayout : PageLayout
+            DefaultMedia : Media
         }
     
     module Catalog =
@@ -120,38 +147,61 @@ module Layout =
                 "Pages", PReference (2, 0) // Catalog will be 1, root page will be 2.
             ] |> Map.ofList |> PDictionary
             
-        let fromPage pages = { Pages = pages; PageLayout = SinglePage }
+        let fromPage pages = { Pages = pages; DefaultMedia = Letter; PageLayout = SinglePage }
     
     type PdfFile =
         {
             Catalog : Catalog
             Info : DocInfo option
+            // TODO: Outline here or groups of pages?
         }
     
-    // What is looks like...
-    let pdf =
-        {
-            Catalog =
-                {
-                    PageLayout = SinglePage
-                    Pages =
-                        [
-                            {
-                                Resources =
-                                    Map.empty
-                                    |> Map.add "Font" [FontResource ("F1", Type1, "Times-Roman")]
-                                Contents = []
-                                MediaSize = Some (Letter)
-                            }
+    module PdfFile =
+        /// Builds a list of PdfObjects ready to write to a PDF file.
+        let build (pdfFile:PdfFile) =
+            [
+                yield PIndObj (1, 0,
+                    [
+                        "Type", PString ("Catalog")
+                        "Pages", PReference (2, 0)
+                    ] |> Map.ofList |> PDictionary
+                )
+                // for simplicity right now, just one deep page tree - TODO: split up to 25-50 page groups
+                yield PIndObj (2, 0,
+                    [
+                        "Type", PName "Pages"
+                        "Kids", PArray [
+                            PReference (3, 0)
+                            PReference (5, 0)
+                            PReference (7, 0)
+                            PReference (9, 0)
                         ]
-                }
-            Info =
-                {
-                    Title = Some "Sample PDF"
-                    Subject = None
-                    Keywords = []
-                    Author = Some "Dave Curylo"
-                    Creator = None
-                    Producer = Some "FsPdf"
-                } |> Some
-        }
+                        "Count", PInteger pdfFile.Catalog.Pages.Length
+                        "MediaBox", pdfFile.Catalog.DefaultMedia.MediaBox
+                    ] |> Map.ofList |> PDictionary
+                )
+                for idx, page in (pdfFile.Catalog.Pages |> List.indexed) do
+                    let pageIdx = 3 + (idx * 2)
+                    let contentIdx = 4 + (idx * 2)
+                    let contentBytes =
+                        page.Contents
+                        |> List.map Instructions.instruction
+                        |> String.concat " "
+                        |> System.Text.Encoding.ASCII.GetBytes
+                    yield PIndObj (pageIdx, 0,
+                        [
+                            "Type", PString ("Page")
+                            "Parent", PReference (2, 0)
+                            "Resources", page.Resources |> Resource.resourceDictionary
+                            "Contents", PReference (contentIdx, 0)
+                        ] |> Map.ofList |> PDictionary
+                    )
+                    yield PIndObj (contentIdx, 0,
+                        PStream (
+                            [
+                                "Length", PInteger contentBytes.Length
+                            ] |> Map.ofList ,
+                            contentBytes
+                        )
+                    )
+            ]
