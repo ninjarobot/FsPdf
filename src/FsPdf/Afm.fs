@@ -98,9 +98,9 @@ module Afm =
         seq {
             let rec readMore (sb:System.Text.StringBuilder) (totalWidth:float) =
                 let c = reader.Peek ()
-                if c < 0 then // End of reader, return whatever is left.
-                    sb.ToString ()
-                else
+                match c with
+                | -1 -> sb.ToString() // End of reader, return whatever is left.
+                | _ -> 
                     let width = c |> char |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
                     if newTotalWidth <= maxwidth then // keep reading
