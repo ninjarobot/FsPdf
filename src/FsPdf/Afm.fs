@@ -96,18 +96,26 @@ module Afm =
             | true, fontMetric -> fontMetric.CharMetrics
             | false, _ -> [] |> dict // we have no char metrics for this font
         seq {
-            let rec readMore (sb:System.Text.StringBuilder) (totalWidth:float) =
+            let rec readMore (sb:System.Text.StringBuilder) (lastSpace:int) (totalWidth:float) =
                 let c = reader.Peek ()
                 match c with
                 | -1 -> sb.ToString() // End of reader, return whatever is left.
-                | _ -> 
-                    let width = c |> char |> charWidth charMetrics f
+                | _ ->
+                    let nextChar = c |> char
+                    let space =
+                        match nextChar with
+                        | ' ' -> sb.Length
+                        | _ -> lastSpace
+                    let width = nextChar |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
                     if newTotalWidth <= maxwidth then // keep reading
                         reader.Read () |> char |> sb.Append |> ignore
-                        readMore sb newTotalWidth
+                        readMore sb space newTotalWidth
                     else // hit the maxwidth, return the string
-                        sb.ToString ()
+                        if space <> -1 then
+                            sb.ToString ()
+                        else
+                            sb.ToString().Substring(0,space)
             while reader.Peek () >= 0 do
-                yield readMore (System.Text.StringBuilder()) 0.
+                yield readMore (System.Text.StringBuilder()) -1 0.
         }
