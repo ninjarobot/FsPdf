@@ -10,7 +10,7 @@ let singlePageFromContent (content:byte array) =
     [
         PIndObj (1, 0,
             [
-                "Type", PString ("Catalog")
+                "Type", PName "Catalog"
                 "Pages", PReference (2, 0)
             ] |> Map.ofList |> PDictionary
         )
@@ -24,7 +24,7 @@ let singlePageFromContent (content:byte array) =
         )
         PIndObj (3, 0,
             [
-                "Type", PString ("Page")
+                "Type", PName "Page"
                 "Parent", PReference (2, 0)
                 "Resources", [
                     "Font", [
