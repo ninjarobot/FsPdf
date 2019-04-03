@@ -96,18 +96,37 @@ module Afm =
             | true, fontMetric -> fontMetric.CharMetrics
             | false, _ -> [] |> dict // we have no char metrics for this font
         seq {
-            let rec readMore (sb:System.Text.StringBuilder) (totalWidth:float) =
+            // A buffer for any characters since the last character that could be a line break.
+            let sincePotentialLineBreak = System.Text.StringBuilder ()
+            // Read through and append 
+            let rec readMore (nextLine:System.Text.StringBuilder) (totalWidth:float) =
                 let c = reader.Peek ()
                 if c < 0 then // End of reader, return whatever is left.
-                    sb.ToString ()
+                    nextLine.Append (sincePotentialLineBreak) |> ignore
+                    sincePotentialLineBreak.Clear () |> ignore
+                    nextLine.ToString ()
                 else
                     let width = c |> char |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
                     if newTotalWidth <= maxwidth then // keep reading
-                        reader.Read () |> char |> sb.Append |> ignore
-                        readMore sb newTotalWidth
+                        let character = reader.Read () |> char
+                        // If it's not a letter or digit, it could be used to break the line,
+                        // so write it, and then the next chars should be buffered.
+                        if not (System.Char.IsLetterOrDigit character) then
+                            // Write anything buffered since the last potential line break
+                            nextLine.Append (sincePotentialLineBreak) |> ignore
+                            // Clear the buffer.
+                            sincePotentialLineBreak.Clear () |> ignore
+                            // Write this character.
+                            character |> nextLine.Append |> ignore
+                            // readMore with the empty buffer
+                            readMore nextLine newTotalWidth
+                        else
+                            // It's a regular letter or digit, write to buffer and keep reading.
+                            character |> sincePotentialLineBreak.Append |> ignore
+                            readMore nextLine newTotalWidth
                     else // hit the maxwidth, return the string
-                        sb.ToString ()
+                        nextLine.ToString ()
             while reader.Peek () >= 0 do
                 yield readMore (System.Text.StringBuilder()) 0.
         }
