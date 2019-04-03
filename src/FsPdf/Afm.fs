@@ -20,6 +20,10 @@ module Afm =
         CharMetrics : System.Collections.Generic.IDictionary<int, CharMetric>
     }
     
+    type LastSpace =
+    | NoSpace
+    | Space of System.Text.StringBuilder
+
     let parseFontMetric (line:string) =
         
         let defaultCharMetrics =
@@ -96,7 +100,7 @@ module Afm =
             | true, fontMetric -> fontMetric.CharMetrics
             | false, _ -> [] |> dict // we have no char metrics for this font
         seq {
-            let rec readMore (sb:System.Text.StringBuilder) (lastSpace:int) (totalWidth:float) =
+            let rec readMore (sb:System.Text.StringBuilder) (lastSpace:LastSpace) (totalWidth:float) =
                 let c = reader.Peek ()
                 match c with
                 | -1 -> sb.ToString() // End of reader, return whatever is left.
@@ -104,7 +108,7 @@ module Afm =
                     let nextChar = c |> char
                     let space =
                         match nextChar with
-                        | ' ' -> sb.Length
+                        | ' ' -> Space sb
                         | _ -> lastSpace
                     let width = nextChar |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
@@ -112,10 +116,9 @@ module Afm =
                         reader.Read () |> char |> sb.Append |> ignore
                         readMore sb space newTotalWidth
                     else // hit the maxwidth, return the string
-                        if space <> -1 then
-                            sb.ToString ()
-                        else
-                            sb.ToString().Substring(0,space)
+                        match lastSpace with
+                        | NoSpace -> sb.ToString()
+                        | Space oldStringBuilder -> oldStringBuilder.ToString()
             while reader.Peek () >= 0 do
-                yield readMore (System.Text.StringBuilder()) -1 0.
+                yield readMore (System.Text.StringBuilder()) NoSpace 0.
         }
