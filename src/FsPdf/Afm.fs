@@ -20,6 +20,10 @@ module Afm =
         CharMetrics : System.Collections.Generic.IDictionary<int, CharMetric>
     }
     
+    type LastSpace =
+    | NoSpace
+    | Space of System.Text.StringBuilder
+
     let parseFontMetric (line:string) =
         
         let defaultCharMetrics =
@@ -96,37 +100,26 @@ module Afm =
             | true, fontMetric -> fontMetric.CharMetrics
             | false, _ -> [] |> dict // we have no char metrics for this font
         seq {
-            // A buffer for any characters since the last character that could be a line break.
-            let sincePotentialLineBreak = System.Text.StringBuilder ()
-            // Read through and append 
-            let rec readMore (nextLine:System.Text.StringBuilder) (totalWidth:float) =
+            let rec readMore (sb:System.Text.StringBuilder) (lastSpace:LastSpace) (totalWidth:float) =
                 let c = reader.Peek ()
-                if c < 0 then // End of reader, return whatever is left.
-                    nextLine.Append (sincePotentialLineBreak) |> ignore
-                    sincePotentialLineBreak.Clear () |> ignore
-                    nextLine.ToString ()
-                else
-                    let width = c |> char |> charWidth charMetrics f
+                match c with
+                | -1 -> sb.ToString() // End of reader, return whatever is left.
+                | _ ->
+                    let nextChar = c |> char
+                    let space =
+                        match System.Char.IsWhiteSpace nextChar with
+                        | true -> Space sb
+                        | false -> lastSpace
+                    let width = nextChar |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
                     if newTotalWidth <= maxwidth then // keep reading
-                        let character = reader.Read () |> char
-                        // If it's not a letter or digit, it could be used to break the line,
-                        // so write it, and then the next chars should be buffered.
-                        if not (System.Char.IsLetterOrDigit character) then
-                            // Write anything buffered since the last potential line break
-                            nextLine.Append (sincePotentialLineBreak) |> ignore
-                            // Clear the buffer.
-                            sincePotentialLineBreak.Clear () |> ignore
-                            // Write this character.
-                            character |> nextLine.Append |> ignore
-                            // readMore with the empty buffer
-                            readMore nextLine newTotalWidth
-                        else
-                            // It's a regular letter or digit, write to buffer and keep reading.
-                            character |> sincePotentialLineBreak.Append |> ignore
-                            readMore nextLine newTotalWidth
+                        reader.Read () |> char |> sb.Append |> ignore
+                        readMore sb space newTotalWidth
                     else // hit the maxwidth, return the string
-                        nextLine.ToString ()
+                        match lastSpace with
+                        | NoSpace -> sb.ToString()
+                        | Space lastSpaceStringBuilder -> lastSpaceStringBuilder.ToString()
+
             while reader.Peek () >= 0 do
-                yield readMore (System.Text.StringBuilder()) 0.
+                yield readMore (System.Text.StringBuilder()) NoSpace 0.
         }
