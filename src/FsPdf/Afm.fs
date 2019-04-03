@@ -118,7 +118,8 @@ module Afm =
                     else // hit the maxwidth, return the string
                         match lastSpace with
                         | NoSpace -> sb.ToString()
-                        | Space oldStringBuilder -> oldStringBuilder.ToString()
+                        | Space lastSpaceStringBuilder -> lastSpaceStringBuilder.ToString()
+
             while reader.Peek () >= 0 do
                 yield readMore (System.Text.StringBuilder()) NoSpace 0.
         }

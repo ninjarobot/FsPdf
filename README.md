@@ -12,11 +12,11 @@ printing, certificates of achievement, TPS reports, customer invoices, taxes, or
 * Paths and shapes.
 * Formatted text.
 * A higher level DSL so you're not working with PDF primitives.
+* Word wrap - wraps at spaces between words (left aligned text).
 
 ### What's in progress
 
 * A nicer DSL for building text without having to understand PDF instructions.
-* Word wrap - needs to wrap at spaces between words.
 
 ### Then what?
 
