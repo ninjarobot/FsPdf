@@ -143,7 +143,7 @@ module Layout =
     module Catalog =
         let PdfObject catalog =
             [
-                "Type", PString ("Catalog")
+                "Type", PName "Catalog"
                 "Pages", PReference (2, 0) // Catalog will be 1, root page will be 2.
             ] |> Map.ofList |> PDictionary
             
@@ -162,7 +162,7 @@ module Layout =
             [
                 yield PIndObj (1, 0,
                     [
-                        "Type", PString ("Catalog")
+                        "Type", PName "Catalog"
                         "Pages", PReference (2, 0)
                     ] |> Map.ofList |> PDictionary
                 )
@@ -186,7 +186,7 @@ module Layout =
                         |> System.Text.Encoding.ASCII.GetBytes
                     yield PIndObj (pageIdx, 0,
                         [
-                            "Type", PString ("Page")
+                            "Type", PName "Page"
                             "Parent", PReference (2, 0)
                             "Resources", page.Resources |> Resource.resourceDictionary
                             "Contents", PReference (contentIdx, 0)
