@@ -107,9 +107,9 @@ module Afm =
                 | _ ->
                     let nextChar = c |> char
                     let space =
-                        match System.Char.IsLetterOrDigit nextChar with
-                        | false -> Space sb
-                        | true -> lastSpace
+                        match System.Char.IsWhiteSpace nextChar with
+                        | true -> Space sb
+                        | false -> lastSpace
                     let width = nextChar |> charWidth charMetrics f
                     let newTotalWidth = totalWidth + width
                     if newTotalWidth <= maxwidth then // keep reading
