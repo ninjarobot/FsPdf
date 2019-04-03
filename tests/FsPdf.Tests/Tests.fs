@@ -33,6 +33,11 @@ let singlePageFromContent (content:byte array) =
                             "Subtype", PName "Type1"
                             "BaseFont", PName "Times-Roman"
                         ] |> Map.ofList |> PDictionary
+                        "F2", [
+                            "Type", PName "Font"
+                            "Subtype", PName "Type1"
+                            "BaseFont", PName "Helvetica"
+                        ] |> Map.ofList |> PDictionary
                     ] |> Map.ofList |> PDictionary
                 ] |> Map.ofList |> PDictionary
                 "Contents", PReference (4, 0)
