@@ -112,7 +112,7 @@ module Afm =
                         let character = reader.Read () |> char
                         // If it's not a letter or digit, it could be used to break the line,
                         // so write it, and then the next chars should be buffered.
-                        if not (System.Char.IsLetterOrDigit character) then
+                        if System.Char.IsWhiteSpace character then
                             // Write anything buffered since the last potential line break
                             nextLine.Append (sincePotentialLineBreak) |> ignore
                             // Clear the buffer.
