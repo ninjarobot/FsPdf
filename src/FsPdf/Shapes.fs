@@ -31,4 +31,43 @@ module Shapes =
             CloseFillStroke
         ]
     
-    
+    module Holiday =
+        
+        let candleFlame (bottom:Point) (top:Point) (fill:System.Drawing.Color) (border:System.Drawing.Color * float) =
+            let height = top.y - bottom.y |> float
+            let c1x = 1./4. * height |> int
+            let c1y = 1./4. * height |> int
+            let c2x = 0.5 * height |> int
+            let c2y = 0.6 * height |> int
+            [
+                Move (bottom.x, bottom.y)
+                Curve (c1x + bottom.x, c1y + bottom.y, c2x + bottom.x, c2y + bottom.y, top.x, top.y)
+                Curve (bottom.x - c2x, c2y + bottom.y, bottom.x - c1x, c1y + bottom.y, bottom.x, bottom.y)
+                fill |> toRGBFill
+                border |> fst |> toRGBStroke
+                border |> snd |> Width
+                CloseFillStroke
+            ]
+        
+        let candle (bottom:Point) (top:Point) (fill:System.Drawing.Color) (border:System.Drawing.Color * float) =
+            let height = top.y - bottom.y |> float
+            let width = 0.1 * height
+            let flameHeight = height * 0.2
+            let candleHeight = height * 0.79
+            [
+                // flame
+                candleFlame {top with y = (float(top.y) - flameHeight) |> int} top System.Drawing.Color.Yellow (System.Drawing.Color.Goldenrod, 0.2)
+                // wick
+                [
+                    Width 1.
+                    Move (bottom.x, float(bottom.y) + candleHeight |> int)
+                    LineTo (bottom.x, float(top.y) - (flameHeight * 0.96) |> int)
+                    System.Drawing.Color.Black |> toRGBStroke
+                    Stroke
+                    LineTo (bottom.x, float(top.y) - (flameHeight * 0.9) |> int)
+                    System.Drawing.Color.Orange |> toRGBStroke
+                    Stroke
+                ]
+                // candle
+                rectange {bottom with x = float(bottom.x) - 0.4 * width |> int} {x = float(top.x) + 0.4 * width |> int; y = float(bottom.y) + candleHeight |> int} fill border
+            ] |> List.concat

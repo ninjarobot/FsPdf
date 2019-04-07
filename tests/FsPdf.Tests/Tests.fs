@@ -115,6 +115,8 @@ let someShapesContent =
         System.Drawing.Color.Goldenrod |> Instructions.toRGBStroke
         CloseFillStroke
     ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
+      //@ (Shapes.Holiday.candleFlame {x=100; y=500} {x=100; y=550} System.Drawing.Color.Yellow (System.Drawing.Color.Orange, 2.))
+      @ (Shapes.Holiday.candle {x=100; y=300} {x=100; y=550} System.Drawing.Color.Pink (System.Drawing.Color.DeepPink, 2.))
 
 [<Fact>]
 let ``Shape testing PDF`` () =
