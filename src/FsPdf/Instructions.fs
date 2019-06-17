@@ -2,11 +2,11 @@ namespace FsPdf
 
 type Instructions =
     // m
-    | Move of x:int * y:int
+    | Move of x:float * y:float
     // l
-    | LineTo of x:int * y:int
+    | LineTo of x:float * y:float
     // c - curve from some start point - the two control points and the end point
-    | Curve of c1x:int * c1y:int * c2x:int * c2y:int * endx:int * endy:int
+    | Curve of c1x:float * c1y:float * c2x:float * c2y:float * endx:float * endy:float
     | Stroke
     // h - close the current path.
     | ClosePath
@@ -21,8 +21,8 @@ type Instructions =
     | GrayFill of lightness:float
     | RGBStroke of red:float * green:float * blue:float
     | RGBFill of red:float * green:float * blue:float
-    | Translate of dx:int * dy:int
-    | Scale of scalex:int * scaley:int
+    | Translate of dx:float * dy:float
+    | Scale of scalex:float * scaley:float
     | Rotate of radians:float
     | PushGraphicsState
     | PopGraphicsState
@@ -35,7 +35,7 @@ type Instructions =
     | NextLineTranslate of x:int * y:int
     | NextLine
     | FontSize of fontKey:string * size:float
-    | TextMatrix of scalex:int * scaley:int * translateX:int * translateY:int
+    | TextMatrix of scalex:float * scaley:float * translateX:float * translateY:float
     | ShowText of text:string
 
 module Instructions =

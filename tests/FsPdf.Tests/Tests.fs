@@ -90,36 +90,36 @@ let ``Wrapped Text PDF`` () =
 
 let someShapesContent =
     [
-        Move (200,350)
-        LineTo (500, 750)
-        LineTo (600, 300)
-        LineTo (175, 220)
+        Move (200.,350.)
+        LineTo (500., 750.)
+        LineTo (600., 300.)
+        LineTo (175., 220.)
         ClosePath
         RGBFill (0.3, 0.0, 0.4)
         RGBStroke (0.7, 0.0, 0.7)
         Width 5.0
         FillStroke
         PushGraphicsState
-        Move (10, 20)
-        Curve (5, 10, 60, 50, 75, 100)
-        LineTo (75, 50)
-        LineTo (10, 50)
+        Move (10., 20.)
+        Curve (5., 10., 60., 50., 75., 100.)
+        LineTo (75., 50.)
+        LineTo (10., 50.)
         RGBFill (0., 0.9, 0.6)
         RGBStroke (0., 0., 0.)
         Width 2.0
         CloseFillStroke
         PopGraphicsState
-        Move (250, 250)
-        LineTo (300, 250)
-        LineTo (300, 300)
-        LineTo (250, 300)
+        Move (250., 250.)
+        LineTo (300., 250.)
+        LineTo (300., 300.)
+        LineTo (250., 300.)
         Width 2.0
         System.Drawing.Color.Goldenrod |> Instructions.toRGBStroke
         CloseFillStroke
-    ] @ (Shapes.rectange {x=400; y=200} {x=600; y=275} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
+    ] @ (Shapes.rectange {x=400.; y=200.} {x=600.; y=275.} System.Drawing.Color.SteelBlue (System.Drawing.Color.Black, 2.))
       //@ (Shapes.Holiday.candleFlame {x=100; y=500} {x=100; y=550} System.Drawing.Color.Yellow (System.Drawing.Color.Orange, 2.))
-      @ (Shapes.Holiday.candle {x=100; y=300} {x=100; y=550} System.Drawing.Color.Pink (System.Drawing.Color.DeepPink, 2.))
-      @ (Shapes.circle {x=125; y=650} 50. System.Drawing.Color.Firebrick (System.Drawing.Color.Black, 2.))
+      @ (Shapes.Holiday.candle {x=100.; y=300.} {x=100.; y=550.} System.Drawing.Color.Pink (System.Drawing.Color.DeepPink, 2.))
+      @ (Shapes.circle {x=125.; y=650.} 50. System.Drawing.Color.Firebrick (System.Drawing.Color.Black, 2.))
 
 [<Fact>]
 let ``Shape testing PDF`` () =
@@ -135,12 +135,12 @@ let ``Shape testing PDF`` () =
 let spiralRectanges =
     let ins =[ 1..174 ] |> List.pairwise |> List.mapi (fun idx (color1, color2) ->
             [
-                yield! (Shapes.rectange {x=idx + 10; y=idx + 10} {x=idx + 75; y=idx + 30} (enum<System.Drawing.KnownColor> color1 |> System.Drawing.Color.FromKnownColor) (enum<System.Drawing.KnownColor> color2 |> System.Drawing.Color.FromKnownColor, 2.))
-                yield Translate (3, 4)
+                yield! (Shapes.rectange {x=idx + 10 |> float; y=idx + 10 |> float} {x=idx + 75 |> float; y=idx + 30 |> float} (enum<System.Drawing.KnownColor> color1 |> System.Drawing.Color.FromKnownColor) (enum<System.Drawing.KnownColor> color2 |> System.Drawing.Color.FromKnownColor, 2.))
+                yield Translate (3., 4.)
                 yield Rotate (0.1)
             ]
         )
-    [Translate (350, 450)] :: ins |> List.concat
+    [Translate (350., 450.)] :: ins |> List.concat
 
 [<Fact>]
 let ``Spiral rectangles PDF`` () =
@@ -154,7 +154,7 @@ let ``Spiral rectangles PDF`` () =
     |> PdfObject.writePdf stream
 
 let triangle =
-    Shapes.triangle { x=200; y=600 } { x=300; y=700 } { x=400; y=600 } System.Drawing.Color.SteelBlue (System.Drawing.Color.Orange, 2.)
+    Shapes.triangle { x=200.; y=600. } { x=300.; y=700. } { x=400.; y=600. } System.Drawing.Color.SteelBlue (System.Drawing.Color.Orange, 2.)
 
 [<Fact>]
 let ``Triangle PDF`` () =
