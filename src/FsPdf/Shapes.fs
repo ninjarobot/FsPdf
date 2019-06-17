@@ -31,6 +31,51 @@ module Shapes =
             CloseFillStroke
         ]
     
+    let circle (center:Point) (radius:float) (fill:System.Drawing.Color) (border:System.Drawing.Color * float) =
+        // Based off http://spencermortensen.com/articles/bezier-circle/
+        let cX = center.x |> float
+        let cY = center.y |> float
+        let factor = 0.551915024494
+        [
+            Move (center.x, int(float(center.y) + radius))
+            Curve (
+                      int(cX + radius * factor),
+                      int(cY + radius),
+                      int(cX + radius),
+                      int(cY + radius * factor),
+                      int(cX + radius),
+                      int(cY)
+                  )
+            Curve (
+                      int(cX + radius),
+                      int(cY - radius * factor),
+                      int(cX + radius * factor),
+                      int(cY - radius),
+                      int(cX),
+                      int(cY - radius)
+                  )
+            Curve (
+                      int(cX - radius * factor),
+                      int(cY - radius),
+                      int(cX - radius),
+                      int(cY - radius * factor),
+                      int(cX - radius),
+                      int(cY)
+                  )
+            Curve (
+                      int(cX - radius),
+                      int(cY + radius * factor),
+                      int(cX - radius * factor),
+                      int(cY + radius),
+                      int(cX),
+                      int(cY + radius)
+                  )
+            fill |> toRGBFill
+            border |> fst |> toRGBStroke
+            border |> snd |> Width
+            CloseFillStroke
+        ]
+    
     module Holiday =
         
         let candleFlame (bottom:Point) (top:Point) (fill:System.Drawing.Color) (border:System.Drawing.Color * float) =
