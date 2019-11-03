@@ -4,3 +4,4 @@ paket-files
 *.user
 .fake/
 .idea/
+paket.exe
