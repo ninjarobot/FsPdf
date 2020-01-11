@@ -4,3 +4,5 @@ paket-files
 *.user
 .fake/
 .idea/
+.DS_Store
+
