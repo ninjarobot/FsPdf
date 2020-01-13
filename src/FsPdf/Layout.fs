@@ -34,7 +34,15 @@ module Layout =
             |> Map.add "Font" fontDict
             |> PDictionary
 
-    
+    type Dimensions =
+        {
+            Width : int
+            Height : int
+        }
+    module Dimensions =
+        let ofWidthHeight (width, height) = { Width = width; Height = height }
+        let toWidthHeight (dim:Dimensions) = (dim.Width, dim.Height)
+        
     type Media =
         | Letter
         | Legal
@@ -52,25 +60,29 @@ module Layout =
         | A8
         | Custom of Width:int * Height:int
         with
+            /// Dots per inch.
+            static member Dpi = 72
             /// Builds the MediaBox array for a page.
-            member mb.MediaBox =
-                let width, height =
-                    match mb with
-                    | Letter -> 612, 792
-                    | Legal -> 612, 1008
-                    | Ledger -> 792, 1224
-                    | Tabloid -> 1224, 792
-                    | Executive -> 522, 756
-                    | A0 -> 2384, 3370
-                    | A1 -> 1684, 2384
-                    | A2 -> 1190, 1684
-                    | A3 -> 842, 1190
-                    | A4 -> 595, 842
-                    | A5 -> 420, 595
-                    | A6 -> 298, 420
-                    | A7 -> 210, 298
-                    | A8 -> 148, 210
-                    | Custom (width, height) -> width, height
+            member media.Dimensions =
+                match media with
+                | Letter -> 612, 792
+                | Legal -> 612, 1008
+                | Ledger -> 792, 1224
+                | Tabloid -> 1224, 792
+                | Executive -> 522, 756
+                | A0 -> 2384, 3370
+                | A1 -> 1684, 2384
+                | A2 -> 1190, 1684
+                | A3 -> 842, 1190
+                | A4 -> 595, 842
+                | A5 -> 420, 595
+                | A6 -> 298, 420
+                | A7 -> 210, 298
+                | A8 -> 148, 210
+                | Custom (width, height) -> width, height
+                |> Dimensions.ofWidthHeight
+            member media.MediaBox =
+                let width, height = media.Dimensions |> Dimensions.toWidthHeight
                 PArray [PInteger 0; PInteger 0; PInteger width; PInteger height]
     
     type Page =

@@ -276,3 +276,164 @@ let ``Build 5 page PDF`` () =
     PdfObject.writePdf stream (pdf |> PdfFile.build)
     stream.Close ()
     ()
+
+/// Mapping of font keys to fonts.
+type FontMap () =
+    let fontKeys = System.Collections.Generic.Dictionary<Font, string> ()
+    
+    /// Adds a unique font resource ID.
+    member this.Set (font:Font) =
+        match fontKeys.TryGetValue font with
+        | true, fontKey -> fontKey
+        | false, _ ->
+            let fontKey = String.Format ("F{0}", fontKeys.Count)
+            fontKeys.[font] <- fontKey
+            fontKey
+    
+    /// Gets a read-only copy of the current FontMap.
+    member this.GetReadOnlyMap () =
+        fontKeys |> Seq.map (fun kvp -> kvp.Value, kvp.Key) |> dict
+
+module Paragraph =
+    type Part =
+        | Content of string
+        | FontSize of int
+        | FontName of string
+    let content (text:string) = Content text
+    let fontSize (size:int) = FontSize size
+    let fontName (name:string) = FontName name
+    
+    type Paragraph =
+        {
+            Text: string
+            Font: Font
+        }
+    
+    let create (parts:Part list) =
+        parts |> List.fold
+            (fun paragraph part ->
+                match part with
+                | Content text -> { paragraph with Text = text }
+                | FontSize size -> { paragraph with Font = { paragraph.Font with Size = float size } }
+                | FontName name -> { paragraph with Font = { paragraph.Font with Name = name } }
+            )
+            { Text=""; Font = { Name="Times-Roman"; Size=12. } }
+    
+    let text (content: string) =
+        { Text=content; Font = { Name="Times-Roman"; Size=12. } }
+    
+    let render (fontMap:FontMap) (media:Media) (paragraph:Paragraph) =
+        let fontKey = fontMap.Set paragraph.Font
+        let text = paragraph.Text
+        use reader = new System.IO.StringReader (text)
+        let lines =
+            wrapString embeddedFontMetrics paragraph.Font (float(media.Dimensions.Width - (Media.Dpi * 2))) reader
+            |> Seq.map (fun line -> [ShowText line; NextLine])
+            |> Seq.concat
+        seq {
+            yield BeginText
+            yield Leading (20)
+            yield Instructions.FontSize (fontKey, paragraph.Font.Size)
+            yield! lines
+            yield EndText
+        }
+module Page =
+    type Part =
+        | Size of Media
+        | Resources of Resource list
+        | Content of Paragraph.Paragraph list
+    let content (paragraphs:Paragraph.Paragraph list) = Content paragraphs
+    let size (media:Media) = Size media
+    let resources (r:Resource list) = Resources r
+        
+    type Page =
+        {
+            Size: Media
+            Resources: Resource list
+            Content: Paragraph.Paragraph list
+        }
+    let create (parts:Part list) =
+        parts |> List.fold
+            (fun page part ->
+                match part with
+                | Size media -> { page with Page.Size = media }
+                | Resources resources -> { page with Resources = resources }
+                | Content paragraphs -> { page with Content = paragraphs }
+            )
+            { Size=Media.Letter; Resources=[]; Content=[] }
+
+    let render (page:Page) =
+        let spaceBetweenParagraphs = 30
+        let fontMap = FontMap ()
+        let renderedParagraphs = page.Content |> Seq.map (Paragraph.render fontMap page.Size)
+        seq {
+            for paragraph in page.Content |> Seq.map (Paragraph.render fontMap page.Size) do
+                yield! paragraph
+                yield NextLineTranslate (spaceBetweenParagraphs, 0)
+        }
+
+module Document =
+    type Part =
+        | Pages of Page.Page list
+    
+    type Document =
+        {
+            Pages: Page.Page list
+        }
+    let pages (pages:Page.Page list) = Pages pages
+    let create (parts:Part list) =
+        parts |> List.fold
+            (fun doc part ->
+                match part with
+                | Pages pages -> { doc with Document.Pages = pages }
+            )
+            { Pages=[] }
+
+/// Builds a paragraph record.
+[<Fact>]
+let ``Build Paragraph`` () =
+    let p = 
+        Paragraph.create [
+            Paragraph.content "Hello world"
+            Paragraph.fontSize 24
+        ]
+    Assert.Equal(24., p.Font.Size)
+    Assert.Equal("Times New Roman", p.Font.Name)
+    Assert.Equal("Hello world", p.Text)
+
+/// Builds a page record containing some paragraphs
+[<Fact>]
+let ``Build Page`` () =
+    let page =
+        Page.create [
+            Page.size Media.A4
+            Page.resources [ ]
+            Page.content [
+                Paragraph.create [
+                    Paragraph.content "Hello world"
+                    Paragraph.fontSize 24
+                ]
+                Paragraph.text "This is some text underneath the header"
+            ]
+        ]
+    Assert.Equal(2, page.Content.Length)
+    
+/// High level language more representative of how people work with PDF
+/// documents.
+let ``Higher level language example`` () =
+    // Concept from Zaid Ajaj
+    Document.create [
+        Document.pages [
+            Page.create [
+                Page.size Media.A4
+                Page.resources [ ]
+                Page.content [
+                    Paragraph.create [
+                        Paragraph.content "Hello world"
+                        Paragraph.fontSize 24
+                    ]
+                    Paragraph.text "This is some text underneath the header"
+                ]
+            ]
+        ]
+    ]
