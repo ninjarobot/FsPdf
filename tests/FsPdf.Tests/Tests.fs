@@ -2,7 +2,6 @@ module Tests
 
 open System
 open System.Drawing
-open System.Drawing
 open Xunit
 open FsPdf
 open FsPdf.Afm

@@ -1,0 +1,28 @@
+name: dotnet pack and publish
+
+on:
+  release:
+    types: [released]
+    branches: [ master ]
+
+jobs:
+  publish:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.300
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: VERSION=${GITHUB_REF##*/} dotnet build -warnaserror --no-restore
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+      - name: Pack
+        run: VERSION=${GITHUB_REF##*/} dotnet pack -o . -c Release
+      - name: Publish
+        run: dotnet nuget push FsPdf.*.nupkg -s https://nuget.org -k ${{ secrets.NUGET_API_KEY }}
