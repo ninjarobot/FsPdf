@@ -3,7 +3,7 @@ FsPdf
 _Builds PDF's from pure F# (and needs a more interesting name)_
 
 [![Build and Test](https://github.com/ninjarobot/FsPdf/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/ninjarobot/FsPdf/actions/workflows/build-and-test.yml)
-[![FsPdf on Nuget](https://img.shields.io/nuget/v/FsPdf)]([https://www.nuget.org/packages/FsPdf/](https://img.shields.io/nuget/v/FsPdf))
+[![FsPdf on Nuget](https://img.shields.io/nuget/v/FsPdf)](https://www.nuget.org/packages/FsPdf/)
 
 Generates PDF content to enable developers to build PDF's programatically.  PDF's are helpful for offline documentation, 
 printing, certificates of achievement, TPS reports, customer invoices, taxes, or being an actuary.
