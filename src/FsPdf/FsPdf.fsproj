@@ -9,7 +9,6 @@
     <PackageProjectUrl>https://github.com/ninjarobot/FsPdf</PackageProjectUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/ninjarobot/FsPdf</RepositoryUrl>
 
