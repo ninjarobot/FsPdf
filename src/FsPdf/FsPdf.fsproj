@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Builds PDF's from pure F#</Description>
-    <Copyright>Copyright 2019-2022 Dave Curylo</Copyright>
+    <Copyright>Copyright 2019-2025 Dave Curylo</Copyright>
     <Authors>Dave Curylo</Authors>
     <PackageId>FsPdf</PackageId>
     <PackageTags>pdf;fsharp</PackageTags>
