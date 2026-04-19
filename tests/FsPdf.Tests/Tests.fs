@@ -220,6 +220,73 @@ let ``Measure a string`` () =
     *)
     Assert.Equal (Math.Truncate (float 128.9375 * 100.), Math.Truncate(float width * 100.))
 
+/// Path to a TrueType font available in the test environment.
+let liberationSansPath = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+
+[<Fact>]
+let ``TrueType metrics from file`` () =
+    if not (System.IO.File.Exists liberationSansPath) then
+        ()   // skip gracefully when font is not installed
+    else
+        let data = System.IO.File.ReadAllBytes liberationSansPath
+        let metrics = FsPdf.TrueType.read data
+        // PostScript name should be non-empty
+        Assert.False (System.String.IsNullOrWhiteSpace metrics.PostScriptName)
+        // Widths array must have 256 entries
+        Assert.Equal (256, metrics.CharWidths.Length)
+        // Space character (32) should have a non-zero width
+        Assert.True (metrics.CharWidths.[32] > 0)
+        // Ascent should be positive, descent non-positive
+        Assert.True (metrics.Ascent > 0)
+        Assert.True (metrics.Descent <= 0)
+
+[<Fact>]
+let ``Embedded font PDF`` () =
+    if not (System.IO.File.Exists liberationSansPath) then
+        ()   // skip gracefully when font is not installed
+    else
+        let pdfName =
+            sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
+        System.IO.File.Delete pdfName
+        use stream = System.IO.File.OpenWrite pdfName
+        let embeddedFont = EmbeddedFont.fromFile liberationSansPath
+        let pdf =
+            {
+                Catalog =
+                    {
+                        PageLayout = SinglePage
+                        DefaultMedia = Media.Letter
+                        Pages =
+                            [
+                                {
+                                    Resources =
+                                        Map.empty
+                                        |> Map.add "F1" (EmbeddedFontResource embeddedFont)
+                                    Contents =
+                                        [
+                                            BeginText
+                                            FontSize ("F1", 24.)
+                                            NextLineTranslate (72, 700)
+                                            ShowText "Hello from an embedded TrueType font!"
+                                            NextLineTranslate (0, -36)
+                                            FontSize ("F1", 12.)
+                                            ShowText "FsPdf supports embedding custom fonts in PDF files."
+                                            EndText
+                                        ]
+                                    MediaSize = Some Letter
+                                }
+                            ]
+                    }
+                Info = None
+            }
+        PdfObject.writePdf stream (pdf |> PdfFile.build)
+        stream.Close ()
+        Assert.True (System.IO.File.Exists pdfName)
+        // PDF must contain the required header
+        let fileBytes = System.IO.File.ReadAllBytes pdfName
+        let text = System.Text.Encoding.ASCII.GetString (fileBytes : byte array)
+        Assert.Contains ("%PDF-1.7", text)
+
 [<Fact>]
 let ``Build 5 page PDF`` () =
     let pdfName =

@@ -6,8 +6,34 @@ module Layout =
         | TrueType
         | Type3
         
+    /// A TrueType or OpenType (TrueType-outline) font to be embedded in the PDF.
+    type EmbeddedFont = {
+        /// Raw bytes of the font file (.ttf or TrueType-outline .otf).
+        FontData : byte array
+        /// Metrics parsed from the font file.
+        Metrics  : TrueType.FontMetrics
+    }
+
+    module EmbeddedFont =
+        /// Load an embedded font from a file path.
+        let fromFile (path: string) =
+            let data = System.IO.File.ReadAllBytes path
+            { FontData = data; Metrics = TrueType.read data }
+
+        /// Load an embedded font from a byte array.
+        let fromBytes (data: byte array) =
+            { FontData = data; Metrics = TrueType.read data }
+
+        /// Load an embedded font from a stream.
+        let fromStream (stream: System.IO.Stream) =
+            use ms = new System.IO.MemoryStream()
+            stream.CopyTo ms
+            fromBytes (ms.ToArray())
+
     type Resource =
         | FontResource of FontSubtype * Name:string
+        /// A font whose binary data is embedded inside the PDF file.
+        | EmbeddedFontResource of EmbeddedFont
     
     module Resource =
         let pdfObject = function
@@ -22,13 +48,24 @@ module Layout =
                 |> Map.add "Subtype" subtypeName
                 |> Map.add "BaseFont" (PName name)
                 |> PDictionary
-        
-        let resourceDictionary (resources:Map<string, Resource>) =
-            // only have fonts now, will need to extend with different types of resources.
+            | EmbeddedFontResource _ ->
+                // Embedded fonts are written as indirect objects by PdfFile.build;
+                // pages reference them via PReference. This path should not be called
+                // for embedded fonts in a well-formed document.
+                PDictionary Map.empty
+
+        /// Builds a resource dictionary for page-level resources.
+        /// For embedded fonts, caller should pass a resolved map of key→object number.
+        let resourceDictionary (embeddedFontRefs: Map<string, int>) (resources: Map<string, Resource>) =
             let fonts = System.Collections.Generic.Dictionary<string, PdfObject>()
             for resource in resources do
                 match resource.Value with
-                | FontResource _ -> fonts.[resource.Key] <- resource.Value |> pdfObject
+                | FontResource _ ->
+                    fonts.[resource.Key] <- resource.Value |> pdfObject
+                | EmbeddedFontResource _ ->
+                    match embeddedFontRefs |> Map.tryFind resource.Key with
+                    | Some objNum -> fonts.[resource.Key] <- PReference (objNum, 0)
+                    | None        -> fonts.[resource.Key] <- resource.Value |> pdfObject
             let fontDict = fonts |> Seq.map (|KeyValue|) |> Map.ofSeq |> PDictionary
             Map.empty
             |> Map.add "Font" fontDict
@@ -158,7 +195,42 @@ module Layout =
     
     module PdfFile =
         /// Builds a list of PdfObjects ready to write to a PDF file.
-        let build (pdfFile:PdfFile) =
+        ///
+        /// Object layout:
+        ///   1             – Catalog
+        ///   2             – Pages (root page tree node)
+        ///   3 + i*3       – Font dictionary for embedded font i
+        ///   4 + i*3       – FontDescriptor for embedded font i
+        ///   5 + i*3       – FontFile2 stream for embedded font i
+        ///   fontBase+p*2  – Page object for page p
+        ///   fontBase+p*2+1– Content stream for page p
+        let build (pdfFile: PdfFile) =
+
+            // Collect unique embedded fonts (by resource key) across all pages.
+            let embeddedFonts =
+                pdfFile.Catalog.Pages
+                |> List.collect (fun page ->
+                    page.Resources
+                    |> Map.toList
+                    |> List.choose (fun (key, res) ->
+                        match res with
+                        | EmbeddedFontResource ef -> Some (key, ef)
+                        | _ -> None
+                    )
+                )
+                |> List.distinctBy fst
+
+            let numEmbeddedFonts = embeddedFonts.Length
+
+            // First object number used for page pairs.
+            let pageObjectBase = 3 + numEmbeddedFonts * 3
+
+            // Map from resource key → Font-dict object number (for PReference in pages).
+            let fontDictObjNums =
+                embeddedFonts
+                |> List.mapi (fun i (key, _) -> key, 3 + i * 3)
+                |> Map.ofList
+
             [
                 yield PIndObj (1, 0,
                     [
@@ -166,19 +238,71 @@ module Layout =
                         "Pages", PReference (2, 0)
                     ] |> Map.ofList |> PDictionary
                 )
-                // for simplicity right now, just one deep page tree - TODO: split up to 25-50 page groups
+
+                // Root page tree — page object numbers start at pageObjectBase.
                 yield PIndObj (2, 0,
                     [
                         "Type", PName "Pages"
-                        "Kids", PArray // Add page references, which start with the third obj.
-                            [ for i in 1 .. 2 .. (pdfFile.Catalog.Pages.Length * 2) do yield PReference (i+2, 0) ]
+                        "Kids", PArray
+                            [ for p in 0 .. pdfFile.Catalog.Pages.Length - 1 do
+                                yield PReference (pageObjectBase + p * 2, 0) ]
                         "Count", PInteger pdfFile.Catalog.Pages.Length
                         "MediaBox", pdfFile.Catalog.DefaultMedia.MediaBox
                     ] |> Map.ofList |> PDictionary
                 )
-                for idx, page in (pdfFile.Catalog.Pages |> List.indexed) do
-                    let pageIdx = 3 + (idx * 2)
-                    let contentIdx = 4 + (idx * 2)
+
+                // Embedded-font objects (Font dict + FontDescriptor + FontFile2 stream).
+                for i, (_key, ef) in embeddedFonts |> List.indexed do
+                    let fontDictObj  = 3 + i * 3
+                    let fontDescObj  = 4 + i * 3
+                    let fontFileObj  = 5 + i * 3
+                    let m = ef.Metrics
+
+                    // Font dictionary
+                    yield PIndObj (fontDictObj, 0,
+                        [
+                            "Type",           PName "Font"
+                            "Subtype",        PName "TrueType"
+                            "BaseFont",       PName m.PostScriptName
+                            "Encoding",       PName "WinAnsiEncoding"
+                            "FirstChar",      PInteger 32
+                            "LastChar",       PInteger 255
+                            "Widths",         PArray [ for c in 32 .. 255 -> PInteger m.CharWidths.[c] ]
+                            "FontDescriptor", PReference (fontDescObj, 0)
+                        ] |> Map.ofList |> PDictionary
+                    )
+
+                    // FontDescriptor
+                    yield PIndObj (fontDescObj, 0,
+                        [
+                            "Type",        PName "FontDescriptor"
+                            "FontName",    PName m.PostScriptName
+                            "Flags",       PInteger m.Flags
+                            "FontBBox",    PArray [ PInteger m.XMin; PInteger m.YMin; PInteger m.XMax; PInteger m.YMax ]
+                            "ItalicAngle", PInteger (int m.ItalicAngle)
+                            "Ascent",      PInteger m.Ascent
+                            "Descent",     PInteger m.Descent
+                            "CapHeight",   PInteger m.CapHeight
+                            "StemV",       PInteger m.StemV
+                            "FontFile2",   PReference (fontFileObj, 0)
+                        ] |> Map.ofList |> PDictionary
+                    )
+
+                    // FontFile2 stream — raw TrueType font bytes
+                    yield PIndObj (fontFileObj, 0,
+                        PStream (
+                            [
+                                "Length",  PInteger ef.FontData.Length
+                                "Length1", PInteger ef.FontData.Length
+                            ] |> Map.ofList,
+                            ef.FontData
+                        )
+                    )
+
+                // Page pairs
+                for idx, page in pdfFile.Catalog.Pages |> List.indexed do
+                    let pageIdx    = pageObjectBase + idx * 2
+                    let contentIdx = pageObjectBase + idx * 2 + 1
                     let contentBytes =
                         page.Contents
                         |> List.map Instructions.instruction
@@ -186,17 +310,15 @@ module Layout =
                         |> System.Text.Encoding.ASCII.GetBytes
                     yield PIndObj (pageIdx, 0,
                         [
-                            "Type", PName "Page"
-                            "Parent", PReference (2, 0)
-                            "Resources", page.Resources |> Resource.resourceDictionary
-                            "Contents", PReference (contentIdx, 0)
+                            "Type",      PName "Page"
+                            "Parent",    PReference (2, 0)
+                            "Resources", page.Resources |> Resource.resourceDictionary fontDictObjNums
+                            "Contents",  PReference (contentIdx, 0)
                         ] |> Map.ofList |> PDictionary
                     )
                     yield PIndObj (contentIdx, 0,
                         PStream (
-                            [
-                                "Length", PInteger contentBytes.Length
-                            ] |> Map.ofList ,
+                            [ "Length", PInteger contentBytes.Length ] |> Map.ofList,
                             contentBytes
                         )
                     )

@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Afm.fs" />
+    <Compile Include="TrueType.fs" />
     <Compile Include="Instructions.fs" />
     <Compile Include="Pdf.fs" />
     <Compile Include="Layout.fs" />

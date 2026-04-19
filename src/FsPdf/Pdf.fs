@@ -59,7 +59,15 @@ module PdfObject =
             writer.Write System.Environment.NewLine
             xrefs.Add newXref
         | PStream (d, bytes) ->
-            writer.WriteLine ("<< /Length {0} >>", bytes.Length)
+            writer.Write "<<"
+            writer.Write System.Environment.NewLine
+            d |> Map.iter (fun name pdfObj ->
+                writer.Write (System.String.Format("/{0} ", name))
+                pdfObj |> writeSource writer xrefs
+                writer.Write System.Environment.NewLine
+            )
+            writer.Write ">>"
+            writer.Write System.Environment.NewLine
             writer.Write "stream"
             writer.Write System.Environment.NewLine
             writer.Flush ()
