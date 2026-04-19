@@ -236,7 +236,8 @@ module TrueType =
                 elif weight >= 500 then 100
                 else 80
 
-            // Build per-char-code widths in 1/1000 of a design unit
+            // Build per-char-code widths in 1/1000 of a design unit.
+            // Codes 0–31 are control characters not used in WinAnsiEncoding, so leave them as 0.
             let charWidths = Array.create 256 0
             for c in 32 .. 255 do
                 let glyphId =
@@ -266,5 +267,8 @@ module TrueType =
                 StemV          = stemV
                 CharWidths     = charWidths
             }
-        with _ ->
-            defaultMetrics
+        with ex ->
+            // Return safe defaults so callers can still produce a PDF even if the font
+            // file is malformed or an unsupported table layout is encountered.
+            // The PostScriptName is set to indicate a parsing failure for diagnostics.
+            { defaultMetrics with PostScriptName = sprintf "UnknownFont_%s" (ex.GetType().Name) }

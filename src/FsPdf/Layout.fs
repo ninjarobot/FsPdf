@@ -48,11 +48,11 @@ module Layout =
                 |> Map.add "Subtype" subtypeName
                 |> Map.add "BaseFont" (PName name)
                 |> PDictionary
-            | EmbeddedFontResource _ ->
-                // Embedded fonts are written as indirect objects by PdfFile.build;
-                // pages reference them via PReference. This path should not be called
-                // for embedded fonts in a well-formed document.
-                PDictionary Map.empty
+                        | EmbeddedFontResource _ ->
+                            // Embedded fonts are emitted as indirect objects by PdfFile.build;
+                            // pages reference them via PReference. Calling pdfObject for an
+                            // EmbeddedFontResource is a programming error.
+                            failwith "EmbeddedFontResource must be resolved to a PReference before building the page resource dictionary."
 
         /// Builds a resource dictionary for page-level resources.
         /// For embedded fonts, caller should pass a resolved map of key→object number.
@@ -279,7 +279,7 @@ module Layout =
                             "FontName",    PName m.PostScriptName
                             "Flags",       PInteger m.Flags
                             "FontBBox",    PArray [ PInteger m.XMin; PInteger m.YMin; PInteger m.XMax; PInteger m.YMax ]
-                            "ItalicAngle", PInteger (int m.ItalicAngle)
+                            "ItalicAngle", PReal m.ItalicAngle
                             "Ascent",      PInteger m.Ascent
                             "Descent",     PInteger m.Descent
                             "CapHeight",   PInteger m.CapHeight
