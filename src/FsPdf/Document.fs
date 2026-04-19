@@ -90,7 +90,7 @@ module Document =
     /// <param name="fontMetrics">Font metrics used to measure text for line wrapping.</param>
     /// <param name="settings">Page settings including media size and margins.</param>
     /// <param name="blocks">The content blocks to lay out.</param>
-    /// <returns>A list of pages ready to be included in a <see cref="Catalog"/>.</returns>
+    /// <returns>A list of pages ready to be included in a Catalog.</returns>
     let paginate
         (fontMetrics: System.Collections.Generic.IDictionary<string, FontMetric>)
         (settings: PageSettings)
@@ -162,14 +162,14 @@ module Document =
         List.ofSeq pages
 
     /// <summary>
-    /// Converts a list of content blocks into a <see cref="PdfFile"/> using the given page
-    /// settings. This is the primary entry point for building a multi-page document from a
+    /// Converts a list of content blocks into a PdfFile using the given page settings.
+    /// This is the primary entry point for building a multi-page document from a
     /// sequence of paragraphs and optional page breaks.
     /// </summary>
     /// <param name="fontMetrics">Font metrics used to measure text for line wrapping.</param>
     /// <param name="settings">Page settings including media size and margins.</param>
     /// <param name="blocks">The content blocks to lay out.</param>
-    /// <returns>A <see cref="PdfFile"/> with automatically paginated content.</returns>
+    /// <returns>A PdfFile with automatically paginated content.</returns>
     let toDocument
         (fontMetrics: System.Collections.Generic.IDictionary<string, FontMetric>)
         (settings: PageSettings)
