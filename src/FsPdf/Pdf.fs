@@ -3,6 +3,7 @@
 type PdfObject =
     | PName of string
     | PInteger of int
+    | PReal of float
     | PString of string
     | PReference of Object:int * Generation:int
     | PArray of PdfObject list
@@ -23,6 +24,7 @@ module PdfObject =
     let rec writeSource (writer:System.IO.StreamWriter) (xrefs:ResizeArray<XRef>) = function
         | PName n -> writer.Write (System.String.Format ("/{0}", n))
         | PInteger i -> writer.Write i
+        | PReal f -> writer.Write (f.ToString("G", System.Globalization.CultureInfo.InvariantCulture))
         | PString s -> writer.Write (System.String.Format ("({0})", s))
         | PReference (o, g) -> writer.Write (System.String.Format ("{0} {1} R", o, g))
         | PArray arr ->
@@ -59,7 +61,15 @@ module PdfObject =
             writer.Write System.Environment.NewLine
             xrefs.Add newXref
         | PStream (d, bytes) ->
-            writer.WriteLine ("<< /Length {0} >>", bytes.Length)
+            writer.Write "<<"
+            writer.Write System.Environment.NewLine
+            d |> Map.iter (fun name pdfObj ->
+                writer.Write (System.String.Format("/{0} ", name))
+                pdfObj |> writeSource writer xrefs
+                writer.Write System.Environment.NewLine
+            )
+            writer.Write ">>"
+            writer.Write System.Environment.NewLine
             writer.Write "stream"
             writer.Write System.Environment.NewLine
             writer.Flush ()
