@@ -30,6 +30,7 @@
     <Compile Include="Pdf.fs" />
     <Compile Include="Layout.fs" />
     <Compile Include="Shapes.fs" />
+    <Compile Include="Document.fs" />
     <EmbeddedResource Include="../../afm/*.afm" />
   </ItemGroup>
   <ItemGroup>

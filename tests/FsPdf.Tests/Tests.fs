@@ -6,6 +6,7 @@ open Xunit
 open FsPdf
 open FsPdf.Afm
 open FsPdf.Layout
+open FsPdf.Document
 
 let singlePageFromContent (content:byte array) =
     [
@@ -342,3 +343,70 @@ let ``Build 5 page PDF`` () =
     PdfObject.writePdf stream (pdf |> PdfFile.build)
     stream.Close ()
     ()
+
+[<Fact>]
+let ``Paginate text into multiple pages`` () =
+    let pdfName =
+        sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
+    System.IO.File.Delete pdfName
+    use stream = System.IO.File.OpenWrite pdfName
+    let text =
+        "F# is a mature, open source, cross-platform, functional-first programming language. \
+         It empowers users and organizations to tackle complex computing problems with simple, \
+         maintainable and robust code."
+    let font = { Name = "Times-Roman"; Size = 12. }
+    let paragraph t =
+        TextParagraph { Text = t; Font = font; FontKey = "F1"; Leading = 15. }
+    // 50 paragraphs is far more than fits on a single Letter page.
+    let blocks = [ for _ in 1..50 -> paragraph text ]
+    let doc = Document.toDocument embeddedFontMetrics PageSettings.letter blocks
+    Assert.True (doc.Catalog.Pages.Length > 1)
+    doc |> PdfFile.build |> PdfObject.writePdf stream
+
+[<Fact>]
+let ``Explicit page break starts new page`` () =
+    let font = { Name = "Times-Roman"; Size = 12. }
+    let para t =
+        TextParagraph { Text = t; Font = font; FontKey = "F1"; Leading = 15. }
+    let blocks =
+        [
+            para "This is chapter one."
+            PageBreak
+            para "This is chapter two."
+        ]
+    let doc = Document.toDocument embeddedFontMetrics PageSettings.letter blocks
+    Assert.Equal (2, doc.Catalog.Pages.Length)
+
+[<Fact>]
+let ``Short content fits on a single page`` () =
+    let font = { Name = "Times-Roman"; Size = 12. }
+    let blocks =
+        [ TextParagraph { Text = "Hello world."; Font = font; FontKey = "F1"; Leading = 15. } ]
+    let doc = Document.toDocument embeddedFontMetrics PageSettings.letter blocks
+    Assert.Equal (1, doc.Catalog.Pages.Length)
+
+[<Fact>]
+let ``Paginated document writes valid PDF`` () =
+    let pdfName =
+        sprintf "%s.pdf" (System.Reflection.MethodBase.GetCurrentMethod().Name)
+    System.IO.File.Delete pdfName
+    use stream = System.IO.File.OpenWrite pdfName
+    let font = { Name = "Helvetica"; Size = 11. }
+    let chapter title body =
+        [
+            TextParagraph { Text = title; Font = { font with Size = 18. }; FontKey = "F1"; Leading = 22. }
+            TextParagraph { Text = body;  Font = font;                     FontKey = "F1"; Leading = 14. }
+        ]
+    let blocks =
+        [
+            yield! chapter "Chapter 1" "The quick brown fox jumps over the lazy dog. \
+                The quick brown fox jumps over the lazy dog. \
+                The quick brown fox jumps over the lazy dog."
+            PageBreak
+            yield! chapter "Chapter 2" "Pack my box with five dozen liquor jugs. \
+                Pack my box with five dozen liquor jugs. \
+                Pack my box with five dozen liquor jugs."
+        ]
+    let doc = Document.toDocument embeddedFontMetrics PageSettings.letter blocks
+    Assert.Equal (2, doc.Catalog.Pages.Length)
+    doc |> PdfFile.build |> PdfObject.writePdf stream
